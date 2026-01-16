@@ -3,68 +3,158 @@ package main
 import (
 	"crypto/aes"
 	"crypto/cipher"
+	"crypto/hmac"
 	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/binary"
+	"flag"
 	"fmt"
+	"io"
 	"os"
-	"strconv"
+	"path/filepath"
 	"time"
 )
 
-// encodeFile encrypts the input file with AES-256-GCM using a key derived from secret
-// and writes a base64 payload to output. If timeoutSeconds > 0, an expiry header is
-// prepended to enforce a time-based decryption expiry.
-func encodeFile(inputPath, outputPath, secret string, timeoutSeconds int64) error {
-	plaintext, err := os.ReadFile(inputPath)
-	if err != nil {
-		return fmt.Errorf("read input: %w", err)
+// pbkdf2Key derives a key using PBKDF2 with SHA-256
+func pbkdf2Key(password, salt []byte, iterations, keyLen int) []byte {
+	prf := hmac.New(sha256.New, password)
+	hashLen := prf.Size()
+	numBlocks := (keyLen + hashLen - 1) / hashLen
+	var key []byte
+	for i := 1; i <= numBlocks; i++ {
+		prf.Reset()
+		prf.Write(salt)
+		blockNum := make([]byte, 4)
+		binary.BigEndian.PutUint32(blockNum, uint32(i))
+		prf.Write(blockNum)
+		u := prf.Sum(nil)
+		block := make([]byte, hashLen)
+		copy(block, u)
+		for j := 1; j < iterations; j++ {
+			prf.Reset()
+			prf.Write(u)
+			u = prf.Sum(nil)
+			for k := 0; k < hashLen; k++ {
+				block[k] ^= u[k]
+			}
+		}
+		key = append(key, block...)
 	}
-	key := sha256.Sum256([]byte(secret))
-	block, err := aes.NewCipher(key[:])
-	if err != nil {
-		return fmt.Errorf("aes init: %w", err)
-	}
-	gcm, err := cipher.NewGCM(block)
-	if err != nil {
-		return fmt.Errorf("gcm init: %w", err)
-	}
-	nonce := make([]byte, gcm.NonceSize())
-	if _, err := rand.Read(nonce); err != nil {
-		return fmt.Errorf("nonce: %w", err)
-	}
-	ciphertext := gcm.Seal(nil, nonce, plaintext, nil)
-	var payload []byte
-	if timeoutSeconds > 0 {
-		expiry := uint64(time.Now().Unix() + timeoutSeconds)
-		header := make([]byte, 8)
-		binary.BigEndian.PutUint64(header, expiry)
-		body := append(nonce, ciphertext...)
-		payload = append(header, body...)
-	} else {
-		payload = append(nonce, ciphertext...)
-	}
-	encoded := base64.StdEncoding.EncodeToString(payload)
-	if err := os.WriteFile(outputPath, []byte(encoded), 0644); err != nil {
-		return fmt.Errorf("write output: %w", err)
-	}
-	return nil
+	return key[:keyLen]
 }
 
-// decodeFile decrypts a base64-encoded payload produced by encodeFile using the same secret.
-// If useHeader is true, it validates the expiry timestamp before decrypting.
-func decodeFile(encodedPath, decodedPath, secret string, useHeader bool) error {
-	encodedBytes, err := os.ReadFile(encodedPath)
-	if err != nil {
-		return fmt.Errorf("open encoded: %w", err)
+// encode encrypts the input with AES-256-GCM using PBKDF2 key derivation
+func encode(inputPath, secret string, expirySeconds int64, filename string, text bool) (string, error) {
+	var plaintext []byte
+	var err error
+	if text {
+		plaintext, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return "", fmt.Errorf("read stdin: %w", err)
+		}
+	} else {
+		plaintext, err = os.ReadFile(inputPath)
+		if err != nil {
+			return "", fmt.Errorf("read input: %w", err)
+		}
+		if filename == "" {
+			filename = filepath.Base(inputPath)
+		}
 	}
-	payload, err := base64.StdEncoding.DecodeString(string(encodedBytes))
-	if err != nil {
-		return fmt.Errorf("base64 decode: %w", err)
+	salt := make([]byte, 16)
+	if _, err := rand.Read(salt); err != nil {
+		return "", fmt.Errorf("salt: %w", err)
 	}
-	key := sha256.Sum256([]byte(secret))
-	block, err := aes.NewCipher(key[:])
+	iterations := 200000
+	key := pbkdf2Key([]byte(secret), salt, iterations, 32)
+	block, err := aes.NewCipher(key)
+	if err != nil {
+		return "", fmt.Errorf("aes init: %w", err)
+	}
+	gcm, err := cipher.NewGCM(block)
+	if err != nil {
+		return "", fmt.Errorf("gcm init: %w", err)
+	}
+	iv := make([]byte, gcm.NonceSize())
+	if _, err := rand.Read(iv); err != nil {
+		return "", fmt.Errorf("iv: %w", err)
+	}
+	ciphertext := gcm.Seal(nil, iv, plaintext, nil)
+	expiry := uint64(0)
+	if expirySeconds > 0 {
+		expiry = uint64(time.Now().Unix() + expirySeconds)
+	}
+	header := make([]byte, 8)
+	binary.BigEndian.PutUint64(header, expiry)
+	iterationsBytes := make([]byte, 4)
+	binary.BigEndian.PutUint32(iterationsBytes, uint32(iterations))
+	nameBytes := []byte(filename)
+	nameLen := byte(len(nameBytes))
+	payloadLen := 8 + 16 + 4 + 1 + len(nameBytes) + 12 + len(ciphertext)
+	payload := make([]byte, payloadLen)
+	off := 0
+	copy(payload[off:], header)
+	off += 8
+	copy(payload[off:], salt)
+	off += 16
+	copy(payload[off:], iterationsBytes)
+	off += 4
+	payload[off] = nameLen
+	off += 1
+	copy(payload[off:], nameBytes)
+	off += len(nameBytes)
+	copy(payload[off:], iv)
+	off += 12
+	copy(payload[off:], ciphertext)
+	encoded := base64.StdEncoding.EncodeToString(payload)
+	return encoded, nil
+}
+
+// decode decrypts a base64 payload and writes the plaintext to a file in the output directory
+func decode(inputPath, secret, outputDir string) error {
+	var payload []byte
+	var err error
+	if inputPath == "-" {
+		payload, err = io.ReadAll(os.Stdin)
+		if err != nil {
+			return fmt.Errorf("read stdin: %w", err)
+		}
+		// Assume it's base64 string
+		payload, err = base64.StdEncoding.DecodeString(string(payload))
+		if err != nil {
+			return fmt.Errorf("base64 decode: %w", err)
+		}
+	} else {
+		encodedBytes, err := os.ReadFile(inputPath)
+		if err != nil {
+			return fmt.Errorf("read input: %w", err)
+		}
+		payload, err = base64.StdEncoding.DecodeString(string(encodedBytes))
+		if err != nil {
+			return fmt.Errorf("base64 decode: %w", err)
+		}
+	}
+	if len(payload) < 8+16+4+1+12 {
+		return fmt.Errorf("payload too short")
+	}
+	off := 0
+	expiry := binary.BigEndian.Uint64(payload[off : off+8])
+	off += 8
+	salt := payload[off : off+16]
+	off += 16
+	iterations := binary.BigEndian.Uint32(payload[off : off+4])
+	off += 4
+	nameLen := payload[off]
+	off += 1
+	nameBytes := payload[off : off+int(nameLen)]
+	filename := string(nameBytes)
+	off += int(nameLen)
+	iv := payload[off : off+12]
+	off += 12
+	ciphertext := payload[off:]
+	key := pbkdf2Key([]byte(secret), salt, int(iterations), 32)
+	block, err := aes.NewCipher(key)
 	if err != nil {
 		return fmt.Errorf("aes init: %w", err)
 	}
@@ -72,70 +162,61 @@ func decodeFile(encodedPath, decodedPath, secret string, useHeader bool) error {
 	if err != nil {
 		return fmt.Errorf("gcm init: %w", err)
 	}
-	nonceSize := gcm.NonceSize()
-	offset := 0
-	if useHeader {
-		if len(payload) < 8+nonceSize {
-			return fmt.Errorf("payload too small for header")
-		}
-		expiry := binary.BigEndian.Uint64(payload[:8])
-		if int64(expiry) < time.Now().Unix() {
-			return fmt.Errorf("payload expired")
-		}
-		offset = 8
-	}
-	payload = payload[offset:]
-	if len(payload) < nonceSize {
-		return fmt.Errorf("payload too small for nonce")
-	}
-	nonce := payload[:nonceSize]
-	ciphertext := payload[nonceSize:]
-	plaintext, err := gcm.Open(nil, nonce, ciphertext, nil)
+	plaintext, err := gcm.Open(nil, iv, ciphertext, nil)
 	if err != nil {
 		return fmt.Errorf("decrypt: %w", err)
 	}
-	if err := os.WriteFile(decodedPath, plaintext, 0644); err != nil {
-		return fmt.Errorf("write decoded: %w", err)
+	if expiry > 0 && int64(expiry) < time.Now().Unix() {
+		return fmt.Errorf("payload expired")
 	}
-	return nil
+	outputPath := filepath.Join(outputDir, filename)
+	return os.WriteFile(outputPath, plaintext, 0644)
 }
 
 func main() {
-	// Usage: go run . <encode|decode> <input> <output> <secret> [timeout_seconds]
-	if len(os.Args) < 5 {
-		fmt.Println("Usage: go run . <encode|decode> <input> <output> <secret> [timeout_seconds]")
-		fmt.Println("  encode: encrypt input file with secret; optional timeout_seconds to expire")
-		fmt.Println("  decode: decrypt base64 payload; will fail if expired when timeout was set")
+	cmd := flag.String("cmd", "", "encode or decode")
+	input := flag.String("input", "", "input file path or - for stdin")
+	output := flag.String("output", "", "output file path or directory, or - for stdout")
+	secret := flag.String("secret", "", "secret key")
+	expiry := flag.Int64("expiry", 0, "expiry seconds")
+	filename := flag.String("filename", "", "filename for text input")
+	text := flag.Bool("text", false, "input is text from stdin")
+	flag.Parse()
+	if *cmd == "" || *secret == "" {
+		fmt.Println("Usage: go run . -cmd encode|decode [flags]")
+		flag.PrintDefaults()
 		os.Exit(1)
 	}
-	cmd, in, out := os.Args[1], os.Args[2], os.Args[3]
-	secret := os.Args[4]
-	var timeout int64 = 0
-	useHeader := false
-	if len(os.Args) >= 6 {
-		val, err := strconv.ParseInt(os.Args[5], 10, 64)
+	if *cmd == "encode" {
+		if *text && *filename == "" {
+			fmt.Fprintln(os.Stderr, "filename required for text input")
+			os.Exit(1)
+		}
+		encoded, err := encode(*input, *secret, *expiry, *filename, *text)
 		if err != nil {
-			fmt.Fprintln(os.Stderr, "Invalid timeout_seconds; must be integer")
+			fmt.Fprintln(os.Stderr, "Error:", err)
 			os.Exit(2)
 		}
-		timeout = val
-		if timeout > 0 {
-			useHeader = true
+		if *output == "-" {
+			fmt.Print(encoded)
+		} else if *output != "" {
+			os.WriteFile(*output, []byte(encoded), 0644)
+		} else {
+			fmt.Print(encoded)
 		}
-	}
-	var err error
-	switch cmd {
-	case "encode":
-		err = encodeFile(in, out, secret, timeout)
-	case "decode":
-		err = decodeFile(in, out, secret, useHeader)
-	default:
-		fmt.Println("Unknown command:", cmd)
+	} else if *cmd == "decode" {
+		outputDir := *output
+		if outputDir == "" {
+			outputDir = "."
+		}
+		err := decode(*input, *secret, outputDir)
+		if err != nil {
+			fmt.Fprintln(os.Stderr, "Error:", err)
+			os.Exit(2)
+		}
+		fmt.Println("Decrypted file written.")
+	} else {
+		fmt.Println("Unknown command:", *cmd)
 		os.Exit(1)
 	}
-	if err != nil {
-		fmt.Fprintln(os.Stderr, "Error:", err)
-		os.Exit(2)
-	}
-	fmt.Println("Done.")
 }
