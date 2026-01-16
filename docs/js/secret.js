@@ -62,8 +62,8 @@ async function encryptFileLike(fileBytes, secret, expirySeconds, filename) {
   return payload.buffer;
 }
 
-async function decryptPayloadBase64(b64, secret) {
-  const payload = fromBase64(b64);
+async function decryptPayload(buffer, secret) {
+  const payload = buffer;
   if (payload.byteLength < 8 + 16 + 4 + 1 + 12) throw new Error('Invalid payload format or too short');
   const payloadBytes = new Uint8Array(payload);
   // Read expiry in first 8 bytes
@@ -118,13 +118,35 @@ document.getElementById('encryptBtn').addEventListener('click', async () => {
   const payloadBuf = await encryptFileLike(arr, secret, expiry, filename);
   document.getElementById('payloadArea').value = toBase64(payloadBuf);
   document.getElementById('copyPayloadBtn').style.display = 'inline';
+
+  if (inputType === 'file') {
+    const blob = new Blob([new Uint8Array(payloadBuf)], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const dl = document.getElementById('downloadEncrypted');
+    const baseName = filename.replace(/\.[^/.]+$/, ''); // remove extension
+    dl.download = baseName + '.encoded';
+    dl.href = url;
+    dl.style.display = 'inline';
+  } else {
+    document.getElementById('downloadEncrypted').style.display = 'none';
+  }
 });
 
 document.getElementById('decryptBtn').addEventListener('click', async () => {
-  const b64 = document.getElementById('payloadInput').value.trim();
   const secret = document.getElementById('decryptSecret').value;
+  const inputType = document.querySelector('input[name="decryptInputType"]:checked').value;
+  let buffer;
+  if (inputType === 'text') {
+    const b64 = document.getElementById('payloadInput').value.trim();
+    if (!b64) { alert('Enter base64 payload'); return; }
+    buffer = fromBase64(b64);
+  } else {
+    const fileInput = document.getElementById('decryptFileInput');
+    if (!fileInput.files[0]) { alert('Choose an encrypted file'); return; }
+    buffer = await fileInput.files[0].arrayBuffer();
+  }
   try {
-    const { plaintext, filename } = await decryptPayloadBase64(b64, secret);
+    const { plaintext, filename } = await decryptPayload(buffer, secret);
     const blob = new Blob([new Uint8Array(plaintext)], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const dl = document.getElementById('downloadLink');

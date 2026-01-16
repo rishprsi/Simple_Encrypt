@@ -1,181 +1,462 @@
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Simple_Encrypt (Client-side)</title>
-  <style>
-    :root{
-      --bg: #0b1020;
-      --surface: #11131a;
-      --text: #e5e7eb;
-      --muted: #94a3b8;
-      --primary: #7c3aed;
-    }
-    *{box-sizing:border-box}
-    html,body{height:100%}
-    body{margin:0;background:var(--bg);font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial; color:var(--text); background-color: var(--bg); color: var(--text)}
-    .wrapper{max-width:720px;margin:40px auto;padding:20px}
-    .card{background:var(--surface);border-radius:12px;padding:20px;box-shadow:0 6px 20px rgba(0,0,0,.5);}
-    .hdr{display:flex;align-items:center;gap:12px;padding:6px 0 12px 0;border-bottom:1px solid #eee;margin-bottom:12px}
-    .logo{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,#4a90e2,#357bd8);display:inline-block}
-    h1{font-size:1.1rem;margin:0}
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Simple_Encrypt (Client-side)</title>
+    <style>
+      :root {
+        --bg: #0b1020;
+        --surface: #11131a;
+        --text: #e5e7eb;
+        --muted: #94a3b8;
+        --primary: #7c3aed;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      html,
+      body {
+        height: 100%;
+      }
+      body {
+        margin: 0;
+        background: var(--bg);
+        font-family:
+          Inter,
+          ui-sans-serif,
+          system-ui,
+          -apple-system,
+          "Segoe UI",
+          Roboto,
+          "Helvetica Neue",
+          Arial;
+        color: var(--text);
+        background-color: var(--bg);
+        color: var(--text);
+      }
+      .wrapper {
+        max-width: 720px;
+        margin: 40px auto;
+        padding: 20px;
+      }
+      .card {
+        background: var(--surface);
+        border-radius: 12px;
+        padding: 20px;
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.5);
+      }
+      .hdr {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 6px 0 12px 0;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 12px;
+      }
+      .logo {
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: linear-gradient(135deg, #4a90e2, #357bd8);
+        display: inline-block;
+      }
+      h1 {
+        font-size: 1.1rem;
+        margin: 0;
+      }
 
-    /* Tabs */
-    .tabs{ display:flex; gap:12px; padding:8px 0 12px 0; border-bottom:1px solid #333; margin-bottom:10px; }
-    .tab{ background: transparent; color: var(--text); border: none; padding: 8px 12px; font-weight:600; cursor:pointer; border-bottom:2px solid transparent; }
-    .tab.active{ border-bottom-color: var(--primary); color:#fff; }
+      /* Tabs */
+      .tabs {
+        display: flex;
+        gap: 12px;
+        padding: 8px 0 12px 0;
+        border-bottom: 1px solid #333;
+        margin-bottom: 10px;
+      }
+      .tab {
+        background: transparent;
+        color: var(--text);
+        border: none;
+        padding: 8px 12px;
+        font-weight: 600;
+        cursor: pointer;
+        border-bottom: 2px solid transparent;
+      }
+      .tab.active {
+        border-bottom-color: var(--primary);
+        color: #fff;
+      }
 
-    .field{display:flex;flex-direction:column;gap:6px;margin:12px 0}
-    label{font-size:.85rem;color:var(--muted)}
-    label:has(input[type="radio"]) { display: flex; align-items: center; gap: 4px; }
-    input, textarea{padding:10px 12px;border:1px solid rgba(255,255,255,.25);border-radius:8px;background: rgba(255,255,255,.04);color:var(--text);font:inherit;width:100%;box-sizing:border-box}
-    input:focus, textarea:focus{outline:none;border-color:var(--primary);box-shadow:0 0 0 3px rgba(124,58,237,.35)}
-    .row{display:flex;gap:10px;flex-wrap:wrap}
-    .btn{background:var(--primary);color:white;border:none;padding:10px 14px;border-radius:8px;font-weight:600;cursor:pointer;}
-    .btn.secondary{background:#e5e7eb;color:#111}
-    .btn:disabled{opacity:.6;cursor:not-allowed}
-    .status{padding:10px 12px;border-radius:8px;margin:8px 0;min-height:40px;border:1px solid #eee}
-    .status.success{background:#e6ffed;border-color:#c6f0d0;color:#1f6a3d}
-    .status.error{background:#ffe8e8;border-color:#f0c6c6;color:#9b1c1c}
-    #payloadArea{min-height:110px;height:110px}
+      .field {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        margin: 12px 0;
+      }
+      label {
+        font-size: 0.85rem;
+        color: var(--muted);
+      }
+      label:has(input[type="radio"]) {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+      }
+      input,
+      textarea {
+        padding: 10px 12px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.04);
+        color: var(--text);
+        font: inherit;
+        width: 100%;
+        box-sizing: border-box;
+      }
+      input:focus,
+      textarea:focus {
+        outline: none;
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.35);
+      }
+      .row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+      }
+      .btn {
+        background: var(--primary);
+        color: white;
+        border: none;
+        padding: 10px 14px;
+        border-radius: 8px;
+        font-weight: 600;
+        cursor: pointer;
+      }
+      .btn.secondary {
+        background: #e5e7eb;
+        color: #111;
+      }
+      .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .status {
+        padding: 10px 12px;
+        border-radius: 8px;
+        margin: 8px 0;
+        min-height: 40px;
+        border: 1px solid #eee;
+      }
+      .status.success {
+        background: #e6ffed;
+        border-color: #c6f0d0;
+        color: #1f6a3d;
+      }
+      .status.error {
+        background: #ffe8e8;
+        border-color: #f0c6c6;
+        color: #9b1c1c;
+      }
+      #payloadArea {
+        min-height: 110px;
+        height: 110px;
+      }
 
-    /* Decrypted text area styling kept consistent */
-    #decryptedTextArea{min-height:110px;height:110px; width:100%; resize:vertical;}
+      /* Decrypted text area styling kept consistent */
+      #decryptedTextArea {
+        min-height: 110px;
+        height: 110px;
+        width: 100%;
+        resize: vertical;
+      }
 
-    @media (max-width: 640px){
-      .wrapper{padding:12px}
-    }
-  </style>
-</head>
-<body>
-  <div class="wrapper">
-    <div class="tabs" id="tabs" role="tablist" aria-label="Encrypt/Decrypt tabs">
-      <button class="tab active" data-panel="encryptPanel" type="button" role="tab" aria-selected="true">Encrypt</button>
-      <button class="tab" data-panel="decryptPanel" type="button" role="tab" aria-selected="false">Decrypt</button>
-    </div>
-
-    <div id="encryptPanel" class="card" aria-label="Encrypt panel" style="display:block;">
-      <div class="hdr"><span class="logo" aria-hidden="true"></span><h1>Simple_Encrypt</h1></div>
-      <div id="status" class="status" aria-live="polite"></div>
-      <div class="field">
-        <label>Input Type</label>
-        <div class="row">
-          <label><input type="radio" name="inputType" value="text" checked /> Text</label>
-          <label><input type="radio" name="inputType" value="file" /> File</label>
-        </div>
-      </div>
-      <div class="field" id="textField">
-        <label for="textInput">Text to Encrypt</label>
-        <textarea id="textInput" placeholder="Enter text to encrypt"></textarea>
-      </div>
-      <div class="field" id="fileField" style="display:none;">
-        <label for="fileInput">File to Encrypt</label>
-        <input id="fileInput" type="file" />
-      </div>
-      <div class="row">
-        <div class="field" style="flex:1 1 260px; min-width:260px;">
-          <label for="encryptSecret">Your Secret Key</label>
-          <input id="encryptSecret" type="password" placeholder="Enter secret key for encryption" />
-        </div>
-        <div class="field" style="flex:1 1 180px; min-width:180px;">
-          <label for="expiry">Expiry (seconds, 0 = none)</label>
-          <input id="expiry" type="number" value="0" min="0" />
-        </div>
-      </div>
-      <button id="encryptBtn" class="btn" type="button">Encrypt</button>
-      <div class="field" style="margin-top:12px;">
-        <label for="payloadArea">Encrypted Payload (base64)</label>
-        <textarea id="payloadArea" placeholder="Base64 payload will appear here"></textarea>
-        <div class="row" style="margin-top:6px;">
-          <button id="copyPayloadBtn" class="btn secondary" type="button" style="display:none;">Copy Payload</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card field" id="decryptPanel" style="display:none; margin-top:12px;">
-      <div class="hdr"><span class="logo" aria-hidden="true"></span><h1>Decrypt</h1></div>
-      <div class="field" style="margin-top:0;">
-        <label for="payloadInput">Payload (base64) for Decrypt</label>
-        <textarea id="payloadInput" placeholder="Paste base64 payload here"></textarea>
-      </div>
-      <div class="field">
-        <label for="decryptSecret">Secret Key (from sender)</label>
-        <input id="decryptSecret" type="password" placeholder="Enter the secret key" />
-      </div>
-      <div class="row" style="margin-top:6px;">
-        <button id="decryptBtn" class="btn" type="button">Decrypt Payload</button>
-      </div>
-      <div class="field" style="margin-top:12px;">
-        <label for="decryptedTextArea">Decrypted Text</label>
-        <textarea id="decryptedTextArea" placeholder="Decrypted text will appear here" readonly></textarea>
-        <div class="row" style="margin-top:6px;">
-          <button id="copyTextBtn" class="btn secondary" type="button" style="display:none;">Copy Text</button>
-          <a id="downloadLink" class="btn" href="#" download="decrypted.bin" style="display:none;">Download File</a>
-        </div>
-      </div>
-    </div>
-  </div>
-
-  <script src="js/secret.js"></script>
-  <script>
-    // Simple two-tab navigation
-    (function(){
-      const tabs = document.querySelectorAll('.tab');
-      const encryptPanel = document.getElementById('encryptPanel');
-      const decryptPanel = document.getElementById('decryptPanel');
-      // Initialize
-      function showPanel(panelId){
-        if(panelId === 'encryptPanel'){
-          encryptPanel.style.display = 'block';
-          decryptPanel.style.display = 'none';
-          tabs.forEach(t => t.classList.remove('active'));
-          document.querySelector('.tab[data-panel="encryptPanel"]').classList.add('active');
-        }else{
-          encryptPanel.style.display = 'none';
-          decryptPanel.style.display = 'block';
-          tabs.forEach(t => t.classList.remove('active'));
-          document.querySelector('.tab[data-panel="decryptPanel"]').classList.add('active');
+      @media (max-width: 640px) {
+        .wrapper {
+          padding: 12px;
         }
       }
-      tabs.forEach(tab => {
-        tab.addEventListener('click', () => {
-          showPanel(tab.getAttribute('data-panel'));
+    </style>
+  </head>
+  <body>
+    <div class="wrapper">
+      <div
+        class="tabs"
+        id="tabs"
+        role="tablist"
+        aria-label="Encrypt/Decrypt tabs"
+      >
+        <button
+          class="tab active"
+          data-panel="encryptPanel"
+          type="button"
+          role="tab"
+          aria-selected="true"
+        >
+          Encrypt
+        </button>
+        <button
+          class="tab"
+          data-panel="decryptPanel"
+          type="button"
+          role="tab"
+          aria-selected="false"
+        >
+          Decrypt
+        </button>
+      </div>
+
+      <div
+        id="encryptPanel"
+        class="card"
+        aria-label="Encrypt panel"
+        style="display: block"
+      >
+        <div class="hdr">
+          <span class="logo" aria-hidden="true"></span>
+          <h1>Simple_Encrypt</h1>
+        </div>
+        <div id="status" class="status" aria-live="polite"></div>
+        <div class="field">
+          <label>Input Type</label>
+          <div class="row">
+            <label
+              ><input type="radio" name="inputType" value="text" checked />
+              Text</label
+            >
+            <label
+              ><input type="radio" name="inputType" value="file" /> File</label
+            >
+          </div>
+        </div>
+        <div class="field" id="textField">
+          <label for="textInput">Text to Encrypt</label>
+          <textarea
+            id="textInput"
+            placeholder="Enter text to encrypt"
+          ></textarea>
+        </div>
+        <div class="field" id="fileField" style="display: none">
+          <label for="fileInput">File to Encrypt</label>
+          <input id="fileInput" type="file" />
+        </div>
+        <div class="row">
+          <div class="field" style="flex: 1 1 260px; min-width: 260px">
+            <label for="encryptSecret">Your Secret Key</label>
+            <input
+              id="encryptSecret"
+              type="password"
+              placeholder="Enter secret key for encryption"
+            />
+          </div>
+          <div class="field" style="flex: 1 1 180px; min-width: 180px">
+            <label for="expiry">Expiry (seconds, 0 = none)</label>
+            <input id="expiry" type="number" value="0" min="0" />
+          </div>
+        </div>
+        <button id="encryptBtn" class="btn" type="button">Encrypt</button>
+        <div class="field" style="margin-top: 12px">
+          <label for="payloadArea">Encrypted Payload (base64)</label>
+          <textarea
+            id="payloadArea"
+            placeholder="Base64 payload will appear here"
+          ></textarea>
+          <div class="row" style="margin-top: 6px">
+            <button
+              id="copyPayloadBtn"
+              class="btn secondary"
+              type="button"
+              style="display: none"
+            >
+              Copy Payload
+            </button>
+            <a
+              id="downloadEncrypted"
+              class="btn secondary"
+              href="#"
+              download="encrypted.encoded"
+              style="display: none"
+              >Download Encrypted</a
+            >
+          </div>
+        </div>
+      </div>
+
+      <div
+        class="card field"
+        id="decryptPanel"
+        style="display: none; margin-top: 12px"
+      >
+        <div class="hdr">
+          <span class="logo" aria-hidden="true"></span>
+          <h1>Decrypt</h1>
+        </div>
+        <div class="field" style="margin-top: 0">
+          <label>Input Type</label>
+          <div class="row">
+            <label
+              ><input
+                type="radio"
+                name="decryptInputType"
+                value="text"
+                checked
+              />
+              Payload</label
+            >
+            <label
+              ><input type="radio" name="decryptInputType" value="file" />
+              File</label
+            >
+          </div>
+        </div>
+        <div class="field" id="decryptTextField">
+          <label for="payloadInput">Payload (base64) for Decrypt</label>
+          <textarea
+            id="payloadInput"
+            placeholder="Paste base64 payload here"
+          ></textarea>
+        </div>
+        <div class="field" id="decryptFileField" style="display: none">
+          <label for="decryptFileInput">Encrypted File to Decrypt</label>
+          <input id="decryptFileInput" type="file" accept=".encoded" />
+        </div>
+        <div class="field">
+          <label for="decryptSecret">Secret Key (from sender)</label>
+          <input
+            id="decryptSecret"
+            type="password"
+            placeholder="Enter the secret key"
+          />
+        </div>
+        <div class="row" style="margin-top: 6px">
+          <button id="decryptBtn" class="btn" type="button">
+            Decrypt Payload
+          </button>
+        </div>
+        <div class="field" style="margin-top: 12px">
+          <label for="decryptedTextArea">Decrypted Text</label>
+          <textarea
+            id="decryptedTextArea"
+            placeholder="Decrypted text will appear here"
+            readonly
+          ></textarea>
+          <div class="row" style="margin-top: 6px">
+            <button
+              id="copyTextBtn"
+              class="btn secondary"
+              type="button"
+              style="display: none"
+            >
+              Copy Text
+            </button>
+            <a
+              id="downloadLink"
+              class="btn"
+              href="#"
+              download="decrypted.bin"
+              style="display: none"
+              >Download File</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="js/secret.js"></script>
+    <script>
+      // Simple two-tab navigation
+      (function () {
+        const tabs = document.querySelectorAll(".tab");
+        const encryptPanel = document.getElementById("encryptPanel");
+        const decryptPanel = document.getElementById("decryptPanel");
+        // Initialize
+        function showPanel(panelId) {
+          if (panelId === "encryptPanel") {
+            encryptPanel.style.display = "block";
+            decryptPanel.style.display = "none";
+            tabs.forEach((t) => t.classList.remove("active"));
+            document
+              .querySelector('.tab[data-panel="encryptPanel"]')
+              .classList.add("active");
+          } else {
+            encryptPanel.style.display = "none";
+            decryptPanel.style.display = "block";
+            tabs.forEach((t) => t.classList.remove("active"));
+            document
+              .querySelector('.tab[data-panel="decryptPanel"]')
+              .classList.add("active");
+          }
+        }
+        tabs.forEach((tab) => {
+          tab.addEventListener("click", () => {
+            showPanel(tab.getAttribute("data-panel"));
+          });
         });
-      });
-      // initialize to show Encrypt
-      showPanel('encryptPanel');
+        // initialize to show Encrypt
+        showPanel("encryptPanel");
 
-      // Copy decrypted text handler
-      const copyBtn = document.getElementById('copyTextBtn');
-      const decryptedTextArea = document.getElementById('decryptedTextArea');
-      copyBtn.addEventListener('click', async () => {
-        const text = decryptedTextArea.value;
-        if(!text) return;
-        try { await navigator.clipboard.writeText(text); alert('Copied to clipboard'); } catch { /* ignore */ }
-      });
+        // Copy decrypted text handler
+        const copyBtn = document.getElementById("copyTextBtn");
+        const decryptedTextArea = document.getElementById("decryptedTextArea");
+        copyBtn.addEventListener("click", async () => {
+          const text = decryptedTextArea.value;
+          if (!text) return;
+          try {
+            await navigator.clipboard.writeText(text);
+            alert("Copied to clipboard");
+          } catch {
+            /* ignore */
+          }
+        });
 
-      // Copy encrypted payload handler
-      const copyPayloadBtn = document.getElementById('copyPayloadBtn');
-      const payloadArea = document.getElementById('payloadArea');
-      copyPayloadBtn.addEventListener('click', async () => {
-        const payload = payloadArea.value;
-        if(!payload) return;
-        try { await navigator.clipboard.writeText(payload); alert('Payload copied to clipboard'); } catch { /* ignore */ }
-      });
+        // Copy encrypted payload handler
+        const copyPayloadBtn = document.getElementById("copyPayloadBtn");
+        const payloadArea = document.getElementById("payloadArea");
+        copyPayloadBtn.addEventListener("click", async () => {
+          const payload = payloadArea.value;
+          if (!payload) return;
+          try {
+            await navigator.clipboard.writeText(payload);
+            alert("Payload copied to clipboard");
+          } catch {
+            /* ignore */
+          }
+        });
 
-      // Toggle input fields
-      const textRadio = document.querySelector('input[name="inputType"][value="text"]');
-      const fileRadio = document.querySelector('input[name="inputType"][value="file"]');
-      textRadio.addEventListener('change', () => {
-        document.getElementById('textField').style.display = 'block';
-        document.getElementById('fileField').style.display = 'none';
-      });
-      fileRadio.addEventListener('change', () => {
-        document.getElementById('textField').style.display = 'none';
-        document.getElementById('fileField').style.display = 'block';
-      });
-    })();
-  </script>
-</body>
+        // Toggle input fields
+        const textRadio = document.querySelector(
+          'input[name="inputType"][value="text"]',
+        );
+        const fileRadio = document.querySelector(
+          'input[name="inputType"][value="file"]',
+        );
+        textRadio.addEventListener("change", () => {
+          document.getElementById("textField").style.display = "block";
+          document.getElementById("fileField").style.display = "none";
+        });
+        fileRadio.addEventListener("change", () => {
+          document.getElementById("textField").style.display = "none";
+          document.getElementById("fileField").style.display = "block";
+        });
+
+        // Toggle decrypt input fields
+        const decryptTextRadio = document.querySelector(
+          'input[name="decryptInputType"][value="text"]',
+        );
+        const decryptFileRadio = document.querySelector(
+          'input[name="decryptInputType"][value="file"]',
+        );
+        decryptTextRadio.addEventListener("change", () => {
+          document.getElementById("decryptTextField").style.display = "block";
+          document.getElementById("decryptFileField").style.display = "none";
+        });
+        decryptFileRadio.addEventListener("change", () => {
+          document.getElementById("decryptTextField").style.display = "none";
+          document.getElementById("decryptFileField").style.display = "block";
+        });
+      })();
+    </script>
+  </body>
 </html>
+
