@@ -57,13 +57,15 @@ async function encryptFileLike(fileBytes, secret, expirySeconds) {
 
 async function decryptPayloadBase64(b64, secret) {
   const payload = fromBase64(b64);
+  if (payload.byteLength < 8 + 16 + 4 + 12) throw new Error('Invalid payload format or too short');
+  const payloadBytes = new Uint8Array(payload);
   // Read expiry in first 8 bytes
-  const expiry = Number(new DataView(payload).getBigUint64(0, false));
+  const expiry = Number(new DataView(payloadBytes.buffer).getBigUint64(0, false));
   const offset = 8;
-  const salt = payload.slice(offset, offset + 16);
-  const iterations = new DataView(payload.buffer, offset + 16, 4).getUint32(0, false);
-  const iv = payload.slice(offset + 20, offset + 32);
-  const ciphertext = payload.slice(offset + 32);
+  const salt = payloadBytes.slice(offset, offset + 16);
+  const iterations = new DataView(payloadBytes.buffer).getUint32(offset + 16, false);
+  const iv = payloadBytes.slice(offset + 20, offset + 32);
+  const ciphertext = payloadBytes.slice(offset + 32);
 
   const key = await deriveKeyPBKDF2(secret, salt, iterations);
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
