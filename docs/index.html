@@ -58,13 +58,13 @@
       <div class="hdr"><span class="logo" aria-hidden="true"></span><h1>Simple_Encrypt</h1></div>
       <div id="status" class="status" aria-live="polite"></div>
       <div class="field">
-        <label for="fileInput">File to Encrypt</label>
-        <input id="fileInput" type="file" />
+        <label for="textInput">Text to Encrypt</label>
+        <textarea id="textInput" placeholder="Enter text to encrypt"></textarea>
       </div>
       <div class="row">
         <div class="field" style="flex:1 1 260px; min-width:260px;">
-          <label for="secret">Secret</label>
-          <input id="secret" type="password" placeholder="Enter secret key" />
+          <label for="encryptSecret">Your Secret Key</label>
+          <input id="encryptSecret" type="password" placeholder="Enter secret key for encryption" />
         </div>
         <div class="field" style="flex:1 1 180px; min-width:180px;">
           <label for="expiry">Expiry (seconds, 0 = none)</label>
@@ -83,6 +83,13 @@
       <div class="field" style="margin-top:0;">
         <label for="payloadInput">Payload (base64) for Decrypt</label>
         <textarea id="payloadInput" placeholder="Paste base64 payload here"></textarea>
+      </div>
+      <div class="field">
+        <label for="decryptSecret">Secret Key (from sender)</label>
+        <input id="decryptSecret" type="password" placeholder="Enter the secret key" />
+      </div>
+      <div class="row" style="margin-top:6px;">
+        <button id="decryptBtn" class="btn" type="button">Decrypt Payload</button>
       </div>
       <div class="row" style="margin-top:6px;">
         <button id="decryptBtn" class="btn" type="button">Decrypt Payload</button>
