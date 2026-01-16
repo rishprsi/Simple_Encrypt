@@ -77,14 +77,23 @@ async function decryptPayloadBase64(b64, secret) {
 }
 
 document.getElementById('encryptBtn').addEventListener('click', async () => {
-  const textInput = document.getElementById('textInput');
   const secret = document.getElementById('encryptSecret').value;
   const expiry = parseInt(document.getElementById('expiry').value || '0', 10);
-  const text = textInput.value;
-  if (!text) { alert('Enter text to encrypt'); return; }
-  const enc = new TextEncoder();
-  const arr = enc.encode(text);
-  const payloadBuf = await encryptFileLike(arr.buffer, secret, expiry);
+  const inputType = document.querySelector('input[name="inputType"]:checked').value;
+  let arr;
+  if (inputType === 'text') {
+    const textInput = document.getElementById('textInput');
+    const text = textInput.value;
+    if (!text) { alert('Enter text to encrypt'); return; }
+    const enc = new TextEncoder();
+    arr = enc.encode(text);
+  } else {
+    const fileInput = document.getElementById('fileInput');
+    if (!fileInput.files[0]) { alert('Choose a file to encrypt'); return; }
+    const file = fileInput.files[0];
+    arr = await file.arrayBuffer();
+  }
+  const payloadBuf = await encryptFileLike(arr, secret, expiry);
   document.getElementById('payloadArea').value = toBase64(payloadBuf);
 });
 
@@ -93,12 +102,29 @@ document.getElementById('decryptBtn').addEventListener('click', async () => {
   const secret = document.getElementById('decryptSecret').value;
   try {
     const plaintext = await decryptPayloadBase64(b64, secret);
-    const bytes = new Uint8Array(plaintext);
-    const text = new TextDecoder('utf-8').decode(bytes);
+    const blob = new Blob([new Uint8Array(plaintext)], { type: 'application/octet-stream' });
+    const url = URL.createObjectURL(blob);
+    const dl = document.getElementById('downloadLink');
+    dl.href = url;
+    dl.style.display = 'inline';
+
+    // Attempt to render decrypted text if it's textual
     const decryptedTextArea = document.getElementById('decryptedTextArea');
     const copyBtn = document.getElementById('copyTextBtn');
-    decryptedTextArea.value = text;
-    copyBtn.style.display = 'inline';
+    const bytes = new Uint8Array(plaintext);
+    let text = null;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+      text = null;
+    }
+    if (text !== null) {
+      decryptedTextArea.value = text;
+      copyBtn.style.display = 'inline';
+    } else {
+      decryptedTextArea.value = '';
+      copyBtn.style.display = 'none';
+    }
   } catch (e) {
     alert('Decrypt failed: ' + e.message);
   }

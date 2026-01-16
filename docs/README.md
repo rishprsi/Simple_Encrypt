@@ -2,7 +2,7 @@
 
 # GitHub Pages Deployment for Simple_Encrypt
 
-This project hosts a minimal client-side Simple_Encrypt encryptor on GitHub Pages. It uses the Web Crypto API to perform AES-256-GCM encryption in the browser, with an optional expiry header.
+This project hosts a minimal client-side Simple_Encrypt encryptor on GitHub Pages. It uses the Web Crypto API to perform AES-256-GCM encryption on text or files in the browser, with an optional expiry header.
 
 ## What’s included
 

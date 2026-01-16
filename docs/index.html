@@ -58,8 +58,19 @@
       <div class="hdr"><span class="logo" aria-hidden="true"></span><h1>Simple_Encrypt</h1></div>
       <div id="status" class="status" aria-live="polite"></div>
       <div class="field">
+        <label>Input Type</label>
+        <div class="row">
+          <label><input type="radio" name="inputType" value="text" checked /> Text</label>
+          <label><input type="radio" name="inputType" value="file" /> File</label>
+        </div>
+      </div>
+      <div class="field" id="textField">
         <label for="textInput">Text to Encrypt</label>
         <textarea id="textInput" placeholder="Enter text to encrypt"></textarea>
+      </div>
+      <div class="field" id="fileField" style="display:none;">
+        <label for="fileInput">File to Encrypt</label>
+        <input id="fileInput" type="file" />
       </div>
       <div class="row">
         <div class="field" style="flex:1 1 260px; min-width:260px;">
@@ -90,6 +101,7 @@
       </div>
       <div class="row" style="margin-top:6px;">
         <button id="decryptBtn" class="btn" type="button">Decrypt Payload</button>
+        <a id="downloadLink" class="btn" href="#" download="decrypted.bin" style="display:none;">Download File</a>
       </div>
       <div class="row" style="margin-top:6px;">
         <button id="decryptBtn" class="btn" type="button">Decrypt Payload</button>
@@ -141,6 +153,18 @@
         const text = decryptedTextArea.value;
         if(!text) return;
         try { await navigator.clipboard.writeText(text); alert('Copied to clipboard'); } catch { /* ignore */ }
+      });
+
+      // Toggle input fields
+      const textRadio = document.querySelector('input[name="inputType"][value="text"]');
+      const fileRadio = document.querySelector('input[name="inputType"][value="file"]');
+      textRadio.addEventListener('change', () => {
+        document.getElementById('textField').style.display = 'block';
+        document.getElementById('fileField').style.display = 'none';
+      });
+      fileRadio.addEventListener('change', () => {
+        document.getElementById('textField').style.display = 'none';
+        document.getElementById('fileField').style.display = 'block';
       });
     })();
   </script>
