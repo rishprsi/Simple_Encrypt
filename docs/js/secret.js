@@ -1,9 +1,15 @@
-// Client-side secret-key encryptor/decryptor using Web Crypto API
+// Client-side secret-key encryptor/decryptor using Web Crypto API (PBKDF2 with salt)
 
-async function deriveKeyFromSecret(secret) {
+async function deriveKeyPBKDF2(secret, salt, iterations) {
   const enc = new TextEncoder();
-  const digest = await crypto.subtle.digest('SHA-256', enc.encode(secret));
-  return crypto.subtle.importKey('raw', digest, { name: 'AES-GCM' }, false, ['encrypt','decrypt']);
+  const baseKey = await crypto.subtle.importKey('raw', enc.encode(secret), { name: 'PBKDF2' }, false, ['deriveKey']);
+  return crypto.subtle.deriveKey(
+    { name: 'PBKDF2', salt: salt, iterations: iterations, hash: 'SHA-256' },
+    baseKey,
+    { name: 'AES-GCM', length: 256 },
+    false,
+    ['encrypt','decrypt']
+  );
 }
 
 function toBase64(arrayBuffer) {
@@ -21,44 +27,50 @@ function fromBase64(b64){
 }
 
 async function encryptFileLike(fileBytes, secret, expirySeconds) {
-  const key = await deriveKeyFromSecret(secret);
+  const salt = new Uint8Array(16);
+  crypto.getRandomValues(salt);
+  const iterations = 200000;
+  const key = await deriveKeyPBKDF2(secret, salt, iterations);
   const iv = crypto.getRandomValues(new Uint8Array(12));
   const ciphertext = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, fileBytes);
-  let payload;
-  if (expirySeconds > 0) {
-    const expiryUnix = Math.floor(Date.now() / 1000) + expirySeconds;
-    const header = new ArrayBuffer(8);
-    const view = new DataView(header);
-    view.setBigUint64(0, BigInt(expiryUnix), false);
-    // nonce + ciphertext
-    const nonceCipher = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-    nonceCipher.set(iv, 0);
-    nonceCipher.set(new Uint8Array(ciphertext), iv.byteLength);
-    payload = new Uint8Array(header.byteLength + nonceCipher.byteLength);
-    payload.set(new Uint8Array(header), 0);
-    payload.set(nonceCipher, header.byteLength);
-  } else {
-    payload = new Uint8Array(iv.byteLength + ciphertext.byteLength);
-    payload.set(iv, 0);
-    payload.set(new Uint8Array(ciphertext), iv.byteLength);
-  }
+
+  const expiryUnix = expirySeconds > 0 ? Math.floor(Date.now() / 1000) + expirySeconds : 0;
+  const header = new Uint8Array(8);
+  const headerView = new DataView(header.buffer);
+  headerView.setBigUint64(0, BigInt(expiryUnix), false);
+
+  const iterationsBytes = new Uint8Array(4);
+  const iterView = new DataView(iterationsBytes.buffer);
+  iterView.setUint32(0, iterations, false);
+
+  // payload: header(8) + salt(16) + iterations(4) + iv(12) + ciphertext
+  const payload = new Uint8Array(8 + 16 + 4 + 12 + ciphertext.byteLength);
+  let off = 0;
+  payload.set(header, off); off += 8;
+  payload.set(salt, off); off += 16;
+  payload.set(iterationsBytes, off); off += 4;
+  payload.set(iv, off); off += 12;
+  payload.set(new Uint8Array(ciphertext), off);
+
   return payload.buffer;
 }
 
-async function decryptPayloadBase64(b64, secret, withHeader) {
-  const key = await deriveKeyFromSecret(secret);
+async function decryptPayloadBase64(b64, secret) {
   const payload = fromBase64(b64);
-  let offset = 0;
-  if (withHeader) {
-    if (payload.byteLength < 8 + 12) throw new Error('Payload too small for header');
-    const view = new DataView(payload);
-    const expiry = Number(view.getBigUint64(0, false));
-    if (expiry < Math.floor(Date.now() / 1000)) throw new Error('Payload expired');
-    offset = 8;
-  }
-  const iv = payload.slice(offset, offset + 12);
-  const ciphertext = payload.slice(offset + 12);
+  // Read expiry in first 8 bytes
+  const expiry = Number(new DataView(payload).getBigUint64(0, false));
+  const offset = 8;
+  const salt = payload.slice(offset, offset + 16);
+  const iterations = new DataView(payload.buffer, offset + 16, 4).getUint32(0, false);
+  const iv = payload.slice(offset + 20, offset + 32);
+  const ciphertext = payload.slice(offset + 32);
+
+  const key = await deriveKeyPBKDF2(secret, salt, iterations);
   const plaintext = await crypto.subtle.decrypt({ name: 'AES-GCM', iv }, key, ciphertext);
+
+  if (expiry !== 0 && expiry < Math.floor(Date.now() / 1000)) {
+    throw new Error('Payload expired');
+  }
   return plaintext;
 }
 
@@ -76,15 +88,31 @@ document.getElementById('encryptBtn').addEventListener('click', async () => {
 document.getElementById('decryptBtn').addEventListener('click', async () => {
   const b64 = document.getElementById('payloadInput').value.trim();
   const secret = document.getElementById('secret').value;
-  const expiry = parseInt(document.getElementById('expiry').value || '0', 10);
-  const withHeader = expiry > 0;
   try {
-    const plaintext = await decryptPayloadBase64(b64, secret, withHeader);
+    const plaintext = await decryptPayloadBase64(b64, secret);
     const blob = new Blob([new Uint8Array(plaintext)], { type: 'application/octet-stream' });
     const url = URL.createObjectURL(blob);
     const dl = document.getElementById('downloadLink');
     dl.href = url;
     dl.style.display = 'inline';
+
+    // Attempt to render decrypted text if it's textual
+    const decryptedTextArea = document.getElementById('decryptedTextArea');
+    const copyBtn = document.getElementById('copyTextBtn');
+    const bytes = new Uint8Array(plaintext);
+    let text = null;
+    try {
+      text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
+    } catch {
+      text = null;
+    }
+    if (text !== null) {
+      decryptedTextArea.value = text;
+      copyBtn.style.display = 'inline';
+    } else {
+      decryptedTextArea.value = '';
+      copyBtn.style.display = 'none';
+    }
   } catch (e) {
     alert('Decrypt failed: ' + e.message);
   }

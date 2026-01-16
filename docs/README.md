@@ -1,8 +1,8 @@
 [![GitHub Pages](https://img.shields.io/badge/GitHub%20Pages-Published-brightgreen?style=for-the-badge)](https://rishprsi.github.io/Simple_Encrypt/)
 
-# GitHub Pages Deployment for Secret-Key Encryptor
+# GitHub Pages Deployment for Simple_Encrypt
 
-This project hosts a minimal client-side secret-key encryptor on GitHub Pages. It uses the Web Crypto API to perform AES-256-GCM encryption in the browser, with an optional expiry header.
+This project hosts a minimal client-side Simple_Encrypt encryptor on GitHub Pages. It uses the Web Crypto API to perform AES-256-GCM encryption in the browser, with an optional expiry header.
 
 ## What’s included
 
