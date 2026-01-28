@@ -4,7 +4,34 @@
 
 This project hosts a minimal client-side Simple_Encrypt encryptor on GitHub Pages. It uses the Web Crypto API to perform AES-256-GCM encryption on text or files in the browser, with an optional expiry header. The app can download encrypted files and upload encrypted files to decrypt.
 
-## What’s included
+## Description
+
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen?style=for-the-badge)](https://rishprsi.github.io/Simple_Encrypt/)
+[![AES-256-GCM](https://img.shields.io/badge/Crypto-AES--256--GCM-blue?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+[![Client-Side](https://img.shields.io/badge/Runtime-Browser%20Only-orange?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
+
+Simple_Encrypt is a browser-first encryption workspace that locks text and files with AES-256-GCM, optional expiry metadata, and zero server dependencies, so you can share sensitive content without handing it to a backend.
+
+## Motivation
+
+I built Simple_Encrypt after too many moments where I wanted to send a quick note or file safely, but every tool I reached for demanded accounts, uploads, or server trust. I wanted something that felt instant and private, where the encryption happens entirely in the browser and I can watch the data stay on my machine. This project is my answer to that friction: a focused, no-excuses encryptor that keeps control in the user's hands and still feels polished enough to share.
+
+## Quick Start
+
+1. Open the live site: <https://rishprsi.github.io/Simple_Encrypt/>
+2. Paste text or select a file, enter a passphrase, and click Encrypt.
+3. Download the encrypted output or upload it later to decrypt.
+
+## Usage
+
+- Encrypt text: paste content, set a passphrase, optionally set an expiry header, and generate encrypted output for sharing.
+- Encrypt files: upload a file to produce an encrypted download that can be stored or shared securely.
+- Decrypt text: paste encrypted payloads to restore the original content in the browser.
+- Decrypt files: upload encrypted files to recover originals with the same passphrase.
+- Optional expiry header: embed a lightweight expiry hint in the encrypted payload for receivers who want time-bound context.
+- Client-only workflow: all cryptography runs locally via Web Crypto; no server-side secrets or uploads.
+
+## Contributing
 
 - docs/index.html: modern, minimal UI for encryption/decryption
 - docs/js/secret.js: client-side logic for derive-key, encrypt, decrypt
