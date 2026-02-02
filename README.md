@@ -8,7 +8,6 @@ This project hosts a minimal client-side Simple_Encrypt encryptor on GitHub Page
 
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-GitHub%20Pages-brightgreen?style=for-the-badge)](https://rishprsi.github.io/Simple_Encrypt/)
 [![AES-256-GCM](https://img.shields.io/badge/Crypto-AES--256--GCM-blue?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
-[![Client-Side](https://img.shields.io/badge/Runtime-Browser%20Only-orange?style=for-the-badge)](https://developer.mozilla.org/en-US/docs/Web/API/Web_Crypto_API)
 
 Simple_Encrypt is a browser-first encryption workspace that locks text and files with AES-256-GCM, optional expiry metadata, and zero server dependencies, so you can share sensitive content without handing it to a backend.
 
